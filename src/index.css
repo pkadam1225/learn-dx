@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global font + base colors */
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #F9FAFC; /* light neutral background */
+  color: #1F2937; /* slate-800 for modern, clean text */
+}
+
+/* Global button/input styling */
+button,
+input,
+select {
+  @apply rounded-md border border-gray-300 shadow-sm px-3 py-2 text-sm;
+}
+
+/* Primary button style */
+button {
+  @apply bg-blue-600 text-white hover:bg-blue-700 transition font-medium;
+}
+
+/* Input focus state */
+input:focus,
+select:focus {
+  @apply ring-2 ring-blue-500 outline-none;
+}
