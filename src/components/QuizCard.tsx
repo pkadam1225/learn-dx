@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import SkinToneDrawer from './SkinToneDrawer';
+import SkinToneNotes from './SkinToneNotes';
 import type { SkinToneNotes as SkinToneNotesType } from './SkinToneNotes';
 
 interface QuizCardProps {
@@ -24,20 +24,16 @@ export default function QuizCard(props: QuizCardProps) {
 
   const [selected, setSelected] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [notesOpen, setNotesOpen] = useState(false);
 
   useEffect(() => {
     setSelected(null);
     setSubmitted(false);
-    setNotesOpen(false);
   }, [id, imageUrl, vignette, correctAnswer]);
 
   const handleSubmit = () => {
     if (selected === null) return;
     setSubmitted(true);
     onSubmit(selected === correctAnswer, selected);
-    // Auto-open the drawer on answer
-    if (skinToneNotes) setNotesOpen(true);
   };
 
   // merged explanation (correct first, then all incorrect)
@@ -70,12 +66,14 @@ export default function QuizCard(props: QuizCardProps) {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white border border-gray-200 rounded-md shadow space-y-6 relative">
+    <div className="max-w-5xl mx-auto p-6 bg-white border border-gray-200 rounded-md shadow space-y-6">
+      {/* meta */}
       <div className="flex justify-between text-sm text-gray-500 font-medium">
         <span>Subject: {subject}</span>
         {fitzpatrick && <span>Fitzpatrick: {fitzpatrick}</span>}
       </div>
 
+      {/* image */}
       {imageUrl && (
         <img
           src={imageUrl}
@@ -84,22 +82,10 @@ export default function QuizCard(props: QuizCardProps) {
         />
       )}
 
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-lg text-gray-800 font-medium flex-1">{vignette}</p>
+      {/* vignette */}
+      <p className="text-lg text-gray-800 font-medium">{vignette}</p>
 
-        {/* Link-style trigger (hidden if no notes) */}
-        {skinToneNotes && (
-          <button
-            onClick={() => setNotesOpen(true)}
-            className="shrink-0 rounded-xl border border-vdx-blue text-vdx-blue px-3 py-2 text-sm hover:bg-vdx-blue/5"
-            aria-haspopup="dialog"
-            aria-expanded={notesOpen}
-          >
-            Skin tone differences
-          </button>
-        )}
-      </div>
-
+      {/* choices */}
       <div className="space-y-3">
         {options.map((option) => {
           const isCorrect = submitted && option === correctAnswer;
@@ -128,6 +114,7 @@ export default function QuizCard(props: QuizCardProps) {
         })}
       </div>
 
+      {/* primary actions */}
       {!submitted ? (
         <button
           onClick={handleSubmit}
@@ -137,24 +124,31 @@ export default function QuizCard(props: QuizCardProps) {
           Submit Answer
         </button>
       ) : (
-        <div className="space-y-4">
-          {renderExplanation()}
-          <button
-            onClick={showNext}
-            className="inline-flex items-center rounded-2xl px-4 py-2 text-sm font-medium text-white bg-vdx-blue hover:brightness-95"
-          >
-            Next Question
-          </button>
+        // ANSWER VIEW: two-column layout with sticky right sidebar
+        <div className="grid grid-cols-1 lg:[grid-template-columns:minmax(0,1fr)_420px] gap-6">
+          <div className="space-y-4">
+            {renderExplanation()}
+            <button
+              onClick={showNext}
+              className="inline-flex items-center rounded-2xl px-4 py-2 text-sm font-medium text-white bg-vdx-blue hover:brightness-95"
+            >
+              Next Question
+            </button>
+          </div>
+
+          {/* Right sidebar: shows only after submit. Stacks below on mobile. */}
+          {skinToneNotes && (
+            <aside className="lg:sticky lg:top-24 self-start">
+              <SkinToneNotes
+                notes={skinToneNotes}
+                highlight={fitzpatrick}
+                collapsed={false}
+                title="Skin tone differences"
+              />
+            </aside>
+          )}
         </div>
       )}
-
-      {/* Slide-out drawer lives at page root so it can overlay everything */}
-      <SkinToneDrawer
-        open={!!skinToneNotes && notesOpen}
-        onClose={() => setNotesOpen(false)}
-        notes={skinToneNotes}
-        highlight={fitzpatrick}
-      />
     </div>
   );
 }
