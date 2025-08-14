@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 
 import Sidebar from './components/Sidebar';
@@ -39,12 +39,19 @@ function AppInner() {
   const [sessionId, setSessionId] = useState<string>(makeSessionId());
   const [score, setScore] = useState(0);
 
+  // If the user signs out mid-session, stop the quiz and go to dashboard
+  useEffect(() => {
+    if (!user) {
+      setQuizStarted(false);
+      navigate('/');
+    }
+  }, [user, navigate]);
+
   const handleGenerate = ({ count, subjects, fitzpatricks }: TestConfig) => {
     // If you require login to save progress, gate here:
     if (!uid) {
       alert('Please sign in with Google to save your quiz history.');
-      // You can return here to force sign-in before taking a quiz:
-      // return;
+      // return; // uncomment if you want to force sign-in before taking a quiz
     }
 
     const filtered = sampleCases.filter((c) => {
@@ -67,7 +74,7 @@ function AppInner() {
     setQuizStarted(true);
   };
 
-  // NOTE: Your latest QuizCard should call onSubmit(isCorrect, selectedAnswer)
+  // NOTE: QuizCard should call onSubmit(isCorrect, selectedAnswer)
   const handleSubmit = (isCorrect: boolean, selectedAnswer: string) => {
     const currentCase = selectedCases[currentIndex];
 

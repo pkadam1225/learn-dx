@@ -6,9 +6,20 @@ const Header = () => {
   const navigate = useNavigate();
   const { user, signIn, signOut } = useAuth();
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } finally {
+      navigate('/'); // go to dashboard after sign-out
+    }
+  };
+
   return (
     <header className="bg-[#1E3A5F] text-white px-6 py-4 flex justify-between items-center shadow">
-      <h1 className="text-lg font-medium">Welcome{user ? `, ${user.displayName?.split(' ')[0] || 'User'}` : ', User'}!</h1>
+      <h1 className="text-lg font-medium">
+        Welcome{user ? `, ${user.displayName?.split(' ')[0] || 'User'}` : ', User'}!
+      </h1>
+
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate('/')}
@@ -17,12 +28,19 @@ const Header = () => {
         >
           <HomeIcon className="w-6 h-6 text-white" />
         </button>
+
         {!user ? (
-          <button onClick={signIn} className="bg-vdx-blue px-3 py-2 rounded-2xl hover:brightness-95">
-            Sign in
+          <button
+            onClick={signIn}
+            className="bg-vdx-blue px-3 py-2 rounded-2xl hover:brightness-95"
+          >
+            Sign in with Google
           </button>
         ) : (
-          <button onClick={signOut} className="bg-vdx-blue px-3 py-2 rounded-2xl hover:brightness-95">
+          <button
+            onClick={handleSignOut}
+            className="bg-vdx-blue px-3 py-2 rounded-2xl hover:brightness-95"
+          >
             Sign out
           </button>
         )}
