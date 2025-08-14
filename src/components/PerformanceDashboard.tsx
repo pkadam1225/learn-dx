@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
 // must match App.tsx
-const storageKey = (uid?: string) => `learndx:progress:${uid || 'anon'}`;
+const progressKey = (uid?: string) => `learndx:progress:${uid || 'anon'}`;
+// guessed results key used by attempts.ts (adjust here if yours differs)
+const resultsKey  = (uid?: string) => `learndx:results:${uid || 'anon'}`;
 
 type SavedProgress = {
   sessionId: string;
@@ -20,25 +22,33 @@ export default function PerformanceDashboard() {
   const navigate = useNavigate();
 
   const [saved, setSaved] = useState<SavedProgress | null>(null);
+  const [hasResults, setHasResults] = useState<boolean>(false);
 
-  // load saved progress on mount / when user changes
+  // load saved progress + whether any results exist
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(storageKey(uid));
-      setSaved(raw ? JSON.parse(raw) as SavedProgress : null);
+      const raw = localStorage.getItem(progressKey(uid));
+      setSaved(raw ? (JSON.parse(raw) as SavedProgress) : null);
     } catch {
       setSaved(null);
     }
+    try {
+      const rawRes = localStorage.getItem(resultsKey(uid));
+      let any = false;
+      if (rawRes) {
+        const data = JSON.parse(rawRes);
+        if (Array.isArray(data)) any = data.length > 0;
+        else if (Array.isArray(data?.items)) any = data.items.length > 0;
+      }
+      setHasResults(any);
+    } catch {
+      setHasResults(false);
+    }
   }, [uid]);
 
-  const handleResume = () => {
-    navigate('/quiz'); // App.tsx auto-restores when hitting /quiz
-  };
-
+  const handleResume = () => navigate('/quiz');
   const handleDiscard = () => {
-    try {
-      localStorage.removeItem(storageKey(uid));
-    } catch {}
+    try { localStorage.removeItem(progressKey(uid)); } catch {}
     setSaved(null);
   };
 
@@ -46,7 +56,7 @@ export default function PerformanceDashboard() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <h1 className="text-2xl font-semibold text-slate-900 mb-2">Performance Dashboard</h1>
+      <h1 className="text-2xl font-semibold text-slate-900 mb-4">Performance Dashboard</h1>
 
       {/* Resume banner if a saved session exists */}
       {saved && saved.total > 0 && (
@@ -55,7 +65,7 @@ export default function PerformanceDashboard() {
             <div>
               <div className="text-sm font-semibold text-slate-900">Resume in-progress quiz</div>
               <div className="text-sm text-slate-700">
-                Question {qNum} of {saved.total} • Score {saved.score} • Last saved{" "}
+                Question {qNum} of {saved.total} • Score {saved.score} • Last saved{' '}
                 {new Date(saved.updatedAt).toLocaleString()}
               </div>
             </div>
@@ -77,11 +87,28 @@ export default function PerformanceDashboard() {
         </div>
       )}
 
-      {/* Your existing dashboard content */}
-      {!user && (
-        <p className="text-slate-600">Sign in to view your saved quizzes.</p>
+      {/* EMPTY STATE — show whenever no results are logged */}
+      {!hasResults && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-900 mb-2">No quizzes yet</h2>
+          <p className="text-slate-600 mb-4">
+            Click <span className="font-medium">Create Test</span> to get started.
+          </p>
+          <button
+            onClick={() => navigate('/create')}
+            className="rounded-xl bg-vdx-blue px-4 py-2 text-sm font-medium text-white hover:brightness-95"
+          >
+            Create Test
+          </button>
+        </div>
       )}
-      {/* TODO: render your stats/cards list here */}
+
+      {/* If you later render a results list/cards, put them below. */}
+      {!user && (
+        <p className="mt-6 text-slate-600">
+          Sign in to view your saved quizzes.
+        </p>
+      )}
     </div>
   );
 }
