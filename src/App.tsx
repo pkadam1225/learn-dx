@@ -120,6 +120,8 @@ function AppInner() {
     }
   };
 
+  const currentCase = selectedCases[currentIndex];
+
   return (
     <div className="flex h-screen">
       <Sidebar />
@@ -128,7 +130,15 @@ function AppInner() {
         <main className="flex-1 p-6 overflow-y-auto">
           {quizStarted ? (
             <QuizCard
-              {...selectedCases[currentIndex]}
+              id={currentCase.id}
+              imageUrl={currentCase.imageUrl}
+              vignette={currentCase.vignette}
+              options={currentCase.options}
+              correctAnswer={currentCase.correctAnswer}
+              explanations={currentCase.explanations}
+              subject={currentCase.subject}
+              fitzpatrick={currentCase.fitzpatrick}
+              skinToneNotes={currentCase.skinToneNotes} // <-- pass explicitly
               onSubmit={handleSubmit}
               showNext={showNext}
             />

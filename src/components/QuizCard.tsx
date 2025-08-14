@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import SkinToneNotes from './SkinToneNotes';
+import SkinToneDrawer from './SkinToneDrawer';
 import type { SkinToneNotes as SkinToneNotesType } from './SkinToneNotes';
 
 interface QuizCardProps {
@@ -12,7 +12,7 @@ interface QuizCardProps {
   subject: string;
   fitzpatrick?: 'I' | 'II' | 'III' | 'IV' | 'V' | 'VI';
   skinToneNotes?: SkinToneNotesType;
-  onSubmit: (isCorrect: boolean, selectedAnswer: string) => void; // <-- pass selected back up
+  onSubmit: (isCorrect: boolean, selectedAnswer: string) => void;
   showNext: () => void;
 }
 
@@ -24,16 +24,20 @@ export default function QuizCard(props: QuizCardProps) {
 
   const [selected, setSelected] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
 
   useEffect(() => {
     setSelected(null);
     setSubmitted(false);
+    setNotesOpen(false);
   }, [id, imageUrl, vignette, correctAnswer]);
 
   const handleSubmit = () => {
     if (selected === null) return;
     setSubmitted(true);
     onSubmit(selected === correctAnswer, selected);
+    // Auto-open the drawer on answer
+    if (skinToneNotes) setNotesOpen(true);
   };
 
   // merged explanation (correct first, then all incorrect)
@@ -66,7 +70,7 @@ export default function QuizCard(props: QuizCardProps) {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white border border-gray-200 rounded-md shadow space-y-6">
+    <div className="max-w-3xl mx-auto p-6 bg-white border border-gray-200 rounded-md shadow space-y-6 relative">
       <div className="flex justify-between text-sm text-gray-500 font-medium">
         <span>Subject: {subject}</span>
         {fitzpatrick && <span>Fitzpatrick: {fitzpatrick}</span>}
@@ -80,14 +84,21 @@ export default function QuizCard(props: QuizCardProps) {
         />
       )}
 
-      <p className="text-lg text-gray-800 font-medium">{vignette}</p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-lg text-gray-800 font-medium flex-1">{vignette}</p>
 
-      {/* Skin tone differences — collapsed on question view */}
-      <SkinToneNotes
-        notes={skinToneNotes}
-        highlight={fitzpatrick}
-        collapsed
-      />
+        {/* Link-style trigger (hidden if no notes) */}
+        {skinToneNotes && (
+          <button
+            onClick={() => setNotesOpen(true)}
+            className="shrink-0 rounded-xl border border-vdx-blue text-vdx-blue px-3 py-2 text-sm hover:bg-vdx-blue/5"
+            aria-haspopup="dialog"
+            aria-expanded={notesOpen}
+          >
+            Skin tone differences
+          </button>
+        )}
+      </div>
 
       <div className="space-y-3">
         {options.map((option) => {
@@ -128,15 +139,6 @@ export default function QuizCard(props: QuizCardProps) {
       ) : (
         <div className="space-y-4">
           {renderExplanation()}
-
-          {/* Skin tone differences — expanded on review */}
-          <SkinToneNotes
-            notes={skinToneNotes}
-            highlight={fitzpatrick}
-            collapsed={false}
-            title="Skin tone differences (review)"
-          />
-
           <button
             onClick={showNext}
             className="inline-flex items-center rounded-2xl px-4 py-2 text-sm font-medium text-white bg-vdx-blue hover:brightness-95"
@@ -145,6 +147,14 @@ export default function QuizCard(props: QuizCardProps) {
           </button>
         </div>
       )}
+
+      {/* Slide-out drawer lives at page root so it can overlay everything */}
+      <SkinToneDrawer
+        open={!!skinToneNotes && notesOpen}
+        onClose={() => setNotesOpen(false)}
+        notes={skinToneNotes}
+        highlight={fitzpatrick}
+      />
     </div>
   );
 }

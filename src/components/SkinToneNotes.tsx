@@ -39,8 +39,9 @@ export default function SkinToneNotes({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left"
-      >
+        className="w-full flex items-center justify-between px-4 py-3 text-left bg-white hover:bg-slate-50 text-slate-800 rounded-t-2xl"
+        aria-expanded={open}
+        >
         <span className="font-semibold text-slate-800">{title}</span>
         <svg
           aria-hidden="true"
