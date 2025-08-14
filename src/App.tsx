@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -20,38 +20,120 @@ import './index.css';
 // Auth
 import { AuthProvider, useAuth } from './auth/AuthContext';
 
-// Create a stable session id for each quiz run
+// -------- storage helpers --------
 function makeSessionId() {
-  // cross-browser friendly
   // @ts-ignore
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return `quiz-${Date.now()}`;
 }
+const storageKey = (uid?: string) => `learndx:progress:${uid || 'anon'}`;
+
+// shape we persist
+type SavedProgress = {
+  sessionId: string;
+  caseIds: string[];
+  currentIndex: number;
+  score: number;
+  total: number;
+  updatedAt: string;
+};
 
 function AppInner() {
   const navigate = useNavigate();
-  const { user } = useAuth(); // <-- used to namespace saved data
+  const location = useLocation();
+  const { user } = useAuth();
   const uid = user?.uid;
 
   const [quizStarted, setQuizStarted] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedCases, setSelectedCases] = useState<DermCase[]>(sampleCases);
+  const [selectedCases, setSelectedCases] = useState<DermCase[]>([]);
   const [sessionId, setSessionId] = useState<string>(makeSessionId());
   const [score, setScore] = useState(0);
 
-  // If the user signs out mid-session, stop the quiz and go to dashboard
+  // If the user signs out mid-session, keep saved progress but route to dashboard
   useEffect(() => {
     if (!user) {
-      setQuizStarted(false);
       navigate('/');
     }
   }, [user, navigate]);
 
+  // ---- AUTOSAVE on every meaningful change ----
+  useEffect(() => {
+    if (!quizStarted || selectedCases.length === 0) return;
+    const data: SavedProgress = {
+      sessionId,
+      caseIds: selectedCases.map((c) => c.id),
+      currentIndex,
+      score,
+      total: selectedCases.length,
+      updatedAt: new Date().toISOString(),
+    };
+    try {
+      localStorage.setItem(storageKey(uid), JSON.stringify(data));
+    } catch {}
+  }, [quizStarted, selectedCases, currentIndex, score, uid, sessionId]);
+
+  // Save on tab close/navigation just in case
+  useEffect(() => {
+    const onBeforeUnload = () => {
+      if (!quizStarted || selectedCases.length === 0) return;
+      const data: SavedProgress = {
+        sessionId,
+        caseIds: selectedCases.map((c) => c.id),
+        currentIndex,
+        score,
+        total: selectedCases.length,
+        updatedAt: new Date().toISOString(),
+      };
+      try {
+        localStorage.setItem(storageKey(uid), JSON.stringify(data));
+      } catch {}
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [quizStarted, selectedCases, currentIndex, score, uid, sessionId]);
+
+  // ---- RESTORE when landing on /quiz and a save exists ----
+  useEffect(() => {
+    const maybeRestore = () => {
+      const raw = localStorage.getItem(storageKey(uid));
+      if (!raw) return;
+      try {
+        const data: SavedProgress = JSON.parse(raw);
+        if (!data?.caseIds?.length) return;
+
+        // rebuild cases from IDs (falls back if any missing)
+        const rebuilt = data.caseIds
+          .map((id) => sampleCases.find((c) => c.id === id))
+          .filter(Boolean) as DermCase[];
+
+        if (rebuilt.length === 0) return;
+
+        setSelectedCases(rebuilt);
+        setCurrentIndex(Math.min(data.currentIndex ?? 0, rebuilt.length - 1));
+        setScore(data.score ?? 0);
+        setSessionId(data.sessionId ?? makeSessionId());
+        setQuizStarted(true);
+      } catch {}
+    };
+
+    // Only auto-restore when user goes to /quiz
+    if (location.pathname === '/quiz') {
+      maybeRestore();
+    }
+  }, [location.pathname, uid]);
+
+  const clearSavedProgress = () => {
+    try {
+      localStorage.removeItem(storageKey(uid));
+    } catch {}
+  };
+
+  // Start / generate quiz, then route to /quiz
   const handleGenerate = ({ count, subjects, fitzpatricks }: TestConfig) => {
-    // If you require login to save progress, gate here:
     if (!uid) {
       alert('Please sign in with Google to save your quiz history.');
-      // return; // uncomment if you want to force sign-in before taking a quiz
+      // (we still allow anonymous runs; they’ll save under anon key)
     }
 
     const filtered = sampleCases.filter((c) => {
@@ -60,8 +142,8 @@ function AppInner() {
         !fitzpatricks || fitzpatricks.length === 0
           ? true
           : c.fitzpatrick
-            ? fitzpatricks.includes(c.fitzpatrick)
-            : true; // include histo cases without FST
+          ? fitzpatricks.includes(c.fitzpatrick)
+          : true; // include histo cases without FST
       return subjectOk && fpOk;
     });
 
@@ -72,16 +154,17 @@ function AppInner() {
     setScore(0);
     setSessionId(makeSessionId());
     setQuizStarted(true);
+
+    navigate('/quiz');
   };
 
-  // NOTE: QuizCard should call onSubmit(isCorrect, selectedAnswer)
+  // Called by QuizCard when a question is submitted
   const handleSubmit = (isCorrect: boolean, selectedAnswer: string) => {
     const currentCase = selectedCases[currentIndex];
+    if (!currentCase) return;
 
-    // Update running score
     if (isCorrect) setScore((s) => s + 1);
 
-    // Persist per-question attempt (namespaced by uid if available)
     if (uid) {
       logAttempt(
         {
@@ -102,7 +185,7 @@ function AppInner() {
     if (currentIndex < selectedCases.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
-      // Quiz finished — record summary for this session
+      // Finished — record result, clear save, go home
       if (uid) {
         const iso = new Date().toISOString().slice(0, 10);
         logQuizResult(
@@ -115,7 +198,9 @@ function AppInner() {
           uid
         );
       }
+      clearSavedProgress();
       setQuizStarted(false);
+      setSelectedCases([]);
       navigate('/'); // back to dashboard
     }
   };
@@ -128,28 +213,42 @@ function AppInner() {
       <div className="flex-1 flex flex-col bg-gray-100 text-gray-900">
         <Header />
         <main className="flex-1 p-6 overflow-y-auto">
-          {quizStarted ? (
-            <QuizCard
-              id={currentCase.id}
-              imageUrl={currentCase.imageUrl}
-              vignette={currentCase.vignette}
-              options={currentCase.options}
-              correctAnswer={currentCase.correctAnswer}
-              explanations={currentCase.explanations}
-              subject={currentCase.subject}
-              fitzpatrick={currentCase.fitzpatrick}
-              skinToneNotes={currentCase.skinToneNotes} // <-- pass explicitly
-              onSubmit={handleSubmit}
-              showNext={showNext}
+          <Routes>
+            <Route path="/" element={<PerformanceDashboard />} />
+            <Route path="/create" element={<TestBuilder onGenerate={handleGenerate} />} />
+            <Route path="/help" element={<div className="text-center text-lg mt-10">Help Page Coming Soon</div>} />
+            <Route path="/review/:sessionId" element={<ReviewPage />} />
+            <Route
+              path="/quiz"
+              element={
+                quizStarted && currentCase ? (
+                  <QuizCard
+                    id={currentCase.id}
+                    imageUrl={currentCase.imageUrl}
+                    vignette={currentCase.vignette}
+                    options={currentCase.options}
+                    correctAnswer={currentCase.correctAnswer}
+                    explanations={currentCase.explanations}
+                    subject={currentCase.subject}
+                    fitzpatrick={currentCase.fitzpatrick}
+                    skinToneNotes={currentCase.skinToneNotes}
+                    onSubmit={handleSubmit}
+                    showNext={showNext}
+                  />
+                ) : (
+                  <div className="max-w-3xl mx-auto bg-white p-6 rounded border">
+                    <p className="text-lg font-semibold mb-2">No active quiz.</p>
+                    <p className="text-sm text-gray-600">
+                      Start a new one on the <span className="font-medium">Create Test</span> page.
+                      {localStorage.getItem(storageKey(uid)) && (
+                        <> You also have a saved session — revisit this page to resume.</>
+                      )}
+                    </p>
+                  </div>
+                )
+              }
             />
-          ) : (
-            <Routes>
-              <Route path="/" element={<PerformanceDashboard />} />
-              <Route path="/create" element={<TestBuilder onGenerate={handleGenerate} />} />
-              <Route path="/help" element={<div className="text-center text-lg mt-10">Help Page Coming Soon</div>} />
-              <Route path="/review/:sessionId" element={<ReviewPage />} />
-            </Routes>
-          )}
+          </Routes>
         </main>
       </div>
     </div>
