@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import SkinToneNotes from './SkinToneNotes';
+import type { SkinToneNotes as SkinToneNotesType } from './SkinToneNotes';
 
 interface QuizCardProps {
   id: string;
@@ -8,15 +10,16 @@ interface QuizCardProps {
   correctAnswer: string;
   explanations: Record<string, string>;
   subject: string;
-  fitzpatrick?: string;
-  onSubmit: (isCorrect: boolean, selectedAnswer: string) => void; // <-- changed
+  fitzpatrick?: 'I' | 'II' | 'III' | 'IV' | 'V' | 'VI';
+  skinToneNotes?: SkinToneNotesType;
+  onSubmit: (isCorrect: boolean, selectedAnswer: string) => void; // <-- pass selected back up
   showNext: () => void;
 }
 
 export default function QuizCard(props: QuizCardProps) {
   const {
     id, imageUrl, vignette, options, correctAnswer, explanations,
-    subject, fitzpatrick, onSubmit, showNext
+    subject, fitzpatrick, skinToneNotes, onSubmit, showNext
   } = props;
 
   const [selected, setSelected] = useState<string | null>(null);
@@ -30,7 +33,7 @@ export default function QuizCard(props: QuizCardProps) {
   const handleSubmit = () => {
     if (selected === null) return;
     setSubmitted(true);
-    onSubmit(selected === correctAnswer, selected); // <-- pass selected
+    onSubmit(selected === correctAnswer, selected);
   };
 
   // merged explanation (correct first, then all incorrect)
@@ -70,10 +73,21 @@ export default function QuizCard(props: QuizCardProps) {
       </div>
 
       {imageUrl && (
-        <img src={imageUrl} alt="quiz visual" className="w-full h-auto max-h-72 object-contain border rounded" />
+        <img
+          src={imageUrl}
+          alt="quiz visual"
+          className="w-full h-auto max-h-72 object-contain border rounded"
+        />
       )}
 
       <p className="text-lg text-gray-800 font-medium">{vignette}</p>
+
+      {/* Skin tone differences — collapsed on question view */}
+      <SkinToneNotes
+        notes={skinToneNotes}
+        highlight={fitzpatrick}
+        collapsed
+      />
 
       <div className="space-y-3">
         {options.map((option) => {
@@ -92,7 +106,11 @@ export default function QuizCard(props: QuizCardProps) {
           }
 
           return (
-            <button key={option} onClick={() => !submitted && setSelected(option)} className={classes}>
+            <button
+              key={option}
+              onClick={() => !submitted && setSelected(option)}
+              className={classes}
+            >
               {option}
             </button>
           );
@@ -110,6 +128,15 @@ export default function QuizCard(props: QuizCardProps) {
       ) : (
         <div className="space-y-4">
           {renderExplanation()}
+
+          {/* Skin tone differences — expanded on review */}
+          <SkinToneNotes
+            notes={skinToneNotes}
+            highlight={fitzpatrick}
+            collapsed={false}
+            title="Skin tone differences (review)"
+          />
+
           <button
             onClick={showNext}
             className="inline-flex items-center rounded-2xl px-4 py-2 text-sm font-medium text-white bg-vdx-blue hover:brightness-95"
