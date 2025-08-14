@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview --port 4173"
   },
   "devDependencies": {
     "@types/react": "^19.1.8",
@@ -23,6 +24,7 @@
     "@heroicons/react": "^1.0.6",
     "@tailwindcss/forms": "^0.5.10",
     "classnames": "^2.5.1",
+    "firebase": "^12.1.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-icons": "^5.5.0",

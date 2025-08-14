@@ -5,15 +5,22 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import TestBuilder from './components/TestBuilder';
 import type { TestConfig } from './components/TestBuilder';
+
 import PerformanceDashboard from './components/PerformanceDashboard';
 import QuizCard from './components/QuizCard';
 import ReviewPage from './components/ReviewPage';
 
 import { sampleCases } from './sampleCases';
 import type { DermCase } from './sampleCases';
+
 import { logAttempt, logQuizResult } from './attempts';
+
 import './index.css';
 
+// Auth
+import { AuthProvider, useAuth } from './auth/AuthContext';
+
+// Create a stable session id for each quiz run
 function makeSessionId() {
   // cross-browser friendly
   // @ts-ignore
@@ -23,21 +30,32 @@ function makeSessionId() {
 
 function AppInner() {
   const navigate = useNavigate();
+  const { user } = useAuth(); // <-- used to namespace saved data
+  const uid = user?.uid;
 
+  const [quizStarted, setQuizStarted] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedCases, setSelectedCases] = useState<DermCase[]>(sampleCases);
-  const [sessionId, setSessionId] = useState<string>('');
+  const [sessionId, setSessionId] = useState<string>(makeSessionId());
   const [score, setScore] = useState(0);
-  const [total, setTotal] = useState(0);
 
   const handleGenerate = ({ count, subjects, fitzpatricks }: TestConfig) => {
+    // If you require login to save progress, gate here:
+    if (!uid) {
+      alert('Please sign in with Google to save your quiz history.');
+      // You can return here to force sign-in before taking a quiz:
+      // return;
+    }
+
     const filtered = sampleCases.filter((c) => {
-      const subjectOK = subjects.includes(c.subject);
-      const fitzOK =
-        c.fitzpatrick === undefined ||
-        fitzpatricks.length === 0 ||
-        fitzpatricks.includes(c.fitzpatrick);
-      return subjectOK && fitzOK;
+      const subjectOk = subjects.includes(c.subject);
+      const fpOk =
+        !fitzpatricks || fitzpatricks.length === 0
+          ? true
+          : c.fitzpatrick
+            ? fitzpatricks.includes(c.fitzpatrick)
+            : true; // include histo cases without FST
+      return subjectOk && fpOk;
     });
 
     const randomized = [...filtered].sort(() => 0.5 - Math.random()).slice(0, count);
@@ -45,36 +63,53 @@ function AppInner() {
     setSelectedCases(randomized);
     setCurrentIndex(0);
     setScore(0);
-    setTotal(0);
-    const sid = makeSessionId();
-    setSessionId(sid);
-    navigate('/quiz');
+    setSessionId(makeSessionId());
+    setQuizStarted(true);
   };
 
+  // NOTE: Your latest QuizCard should call onSubmit(isCorrect, selectedAnswer)
   const handleSubmit = (isCorrect: boolean, selectedAnswer: string) => {
-    const cur = selectedCases[currentIndex];
+    const currentCase = selectedCases[currentIndex];
 
-    logAttempt({
-      sessionId,
-      caseId: cur.id,
-      selectedAnswer,
-      wasCorrect: isCorrect,
-      subject: cur.subject,
-      tags: cur.tags,
-      timestamp: new Date().toISOString(),
-    });
+    // Update running score
+    if (isCorrect) setScore((s) => s + 1);
 
-    setScore((s) => s + (isCorrect ? 1 : 0));
-    setTotal((t) => t + 1);
+    // Persist per-question attempt (namespaced by uid if available)
+    if (uid) {
+      logAttempt(
+        {
+          sessionId,
+          caseId: currentCase.id,
+          selectedAnswer,
+          wasCorrect: isCorrect,
+          subject: currentCase.subject,
+          tags: currentCase.tags,
+          timestamp: new Date().toISOString(),
+        },
+        uid
+      );
+    }
   };
 
   const showNext = () => {
     if (currentIndex < selectedCases.length - 1) {
-      setCurrentIndex((i) => i + 1);
+      setCurrentIndex((prev) => prev + 1);
     } else {
-      const isoDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-      logQuizResult({ sessionId, date: isoDate, score, total });
-      navigate('/'); // back to Dashboard
+      // Quiz finished — record summary for this session
+      if (uid) {
+        const iso = new Date().toISOString().slice(0, 10);
+        logQuizResult(
+          {
+            sessionId,
+            date: iso,
+            score,
+            total: selectedCases.length,
+          },
+          uid
+        );
+      }
+      setQuizStarted(false);
+      navigate('/'); // back to dashboard
     }
   };
 
@@ -84,36 +119,33 @@ function AppInner() {
       <div className="flex-1 flex flex-col bg-gray-100 text-gray-900">
         <Header />
         <main className="flex-1 p-6 overflow-y-auto">
-          <Routes>
-            <Route path="/" element={<PerformanceDashboard />} />
-            <Route path="/create" element={<TestBuilder onGenerate={handleGenerate} />} />
-            <Route
-              path="/quiz"
-              element={
-                <QuizCard
-                  key={selectedCases[currentIndex]?.id ?? 'none'} // reset per question
-                  {...selectedCases[currentIndex]}
-                  onSubmit={handleSubmit}
-                  showNext={showNext}
-                />
-              }
+          {quizStarted ? (
+            <QuizCard
+              {...selectedCases[currentIndex]}
+              onSubmit={handleSubmit}
+              showNext={showNext}
             />
-            <Route path="/review/:sessionId" element={<ReviewPage />} />
-            <Route
-              path="/help"
-              element={<div className="text-center text-lg mt-10">Help Page Coming Soon</div>}
-            />
-          </Routes>
+          ) : (
+            <Routes>
+              <Route path="/" element={<PerformanceDashboard />} />
+              <Route path="/create" element={<TestBuilder onGenerate={handleGenerate} />} />
+              <Route path="/help" element={<div className="text-center text-lg mt-10">Help Page Coming Soon</div>} />
+              <Route path="/review/:sessionId" element={<ReviewPage />} />
+            </Routes>
+          )}
         </main>
       </div>
     </div>
   );
 }
 
+// Outer wrapper that mounts Router + AuthProvider
 export default function App() {
   return (
     <Router>
-      <AppInner />
+      <AuthProvider>
+        <AppInner />
+      </AuthProvider>
     </Router>
   );
 }
