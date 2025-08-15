@@ -27,8 +27,6 @@ function makeSessionId() {
   return `quiz-${Date.now()}`;
 }
 const storageKey = (uid?: string) => `learndx:progress:${uid || 'anon'}`;
-// also store summaries/attempts locally for guests
-const resultsKey = (uid?: string) => `learndx:results:${uid || 'anon'}`;
 
 // shape we persist
 type SavedProgress = {
@@ -52,17 +50,13 @@ function AppInner() {
   const [sessionId, setSessionId] = useState<string>(makeSessionId());
   const [score, setScore] = useState(0);
 
-  // If the user signs out, route to dashboard (progress is still saved in localStorage)
+  // If logged out, only force-leave the quiz route; allow guests to browse /create, /help, etc.
   useEffect(() => {
-    if (!user) navigate('/');
-  }, [user, navigate]);
-
-  // If we navigate away from /quiz via the sidebar, exit quiz view (progress stays saved)
-  useEffect(() => {
-    if (location.pathname !== '/quiz' && quizStarted) {
+    if (!user && location.pathname === '/quiz') {
       setQuizStarted(false);
+      navigate('/');
     }
-  }, [location.pathname, quizStarted]);
+  }, [user, location.pathname, navigate]);
 
   // ---- AUTOSAVE on every meaningful change ----
   useEffect(() => {
@@ -124,6 +118,7 @@ function AppInner() {
       } catch {}
     };
 
+    // Only auto-restore when user goes to /quiz
     if (location.pathname === '/quiz') {
       maybeRestore();
     }
@@ -139,7 +134,7 @@ function AppInner() {
   const handleGenerate = ({ count, subjects, fitzpatricks }: TestConfig) => {
     if (!uid) {
       alert('Please sign in with Google to save your quiz history.');
-      // still allow anonymous runs; they save under 'anon'
+      // (we still allow anonymous runs; they’ll save under anon key)
     }
 
     const filtered = sampleCases.filter((c) => {
@@ -148,8 +143,8 @@ function AppInner() {
         !fitzpatricks || fitzpatricks.length === 0
           ? true
           : c.fitzpatrick
-          ? fitzpatricks.includes(c.fitzpatrick)
-          : true; // include histo cases without FST
+            ? fitzpatricks.includes(c.fitzpatrick)
+            : true; // include histo cases without FST
       return subjectOk && fpOk;
     });
 
@@ -184,23 +179,6 @@ function AppInner() {
         },
         uid
       );
-    } else {
-      // minimal local attempt log for guests (optional but useful for future analytics)
-      try {
-        const key = resultsKey(undefined);
-        const raw = localStorage.getItem(key);
-        const data = raw ? JSON.parse(raw) : [];
-        data.push({
-          _type: 'attempt',
-          sessionId,
-          caseId: currentCase.id,
-          selectedAnswer,
-          wasCorrect: isCorrect,
-          subject: currentCase.subject,
-          timestamp: new Date().toISOString(),
-        });
-        localStorage.setItem(key, JSON.stringify(data));
-      } catch {}
     }
   };
 
@@ -220,21 +198,6 @@ function AppInner() {
           },
           uid
         );
-      } else {
-        // store a summary locally for guests so Dashboard can show history
-        try {
-          const key = resultsKey(undefined);
-          const raw = localStorage.getItem(key);
-          const data = raw ? JSON.parse(raw) : [];
-          data.push({
-            _type: 'summary',
-            sessionId,
-            date: new Date().toISOString().slice(0, 10),
-            score,
-            total: selectedCases.length,
-          });
-          localStorage.setItem(key, JSON.stringify(data));
-        } catch {}
       }
       clearSavedProgress();
       setQuizStarted(false);
