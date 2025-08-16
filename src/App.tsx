@@ -50,14 +50,6 @@ function AppInner() {
   const [sessionId, setSessionId] = useState<string>(makeSessionId());
   const [score, setScore] = useState(0);
 
-  // If logged out, only force-leave the quiz route; allow guests to browse /create, /help, etc.
-  useEffect(() => {
-    if (!user && location.pathname === '/quiz') {
-      setQuizStarted(false);
-      navigate('/');
-    }
-  }, [user, location.pathname, navigate]);
-
   // ---- AUTOSAVE on every meaningful change ----
   useEffect(() => {
     if (!quizStarted || selectedCases.length === 0) return;
@@ -134,7 +126,7 @@ function AppInner() {
   const handleGenerate = ({ count, subjects, fitzpatricks }: TestConfig) => {
     if (!uid) {
       alert('Please sign in with Google to save your quiz history.');
-      // (we still allow anonymous runs; they’ll save under anon key)
+      // (still allow anonymous runs; they save under anon key)
     }
 
     const filtered = sampleCases.filter((c) => {
@@ -143,8 +135,8 @@ function AppInner() {
         !fitzpatricks || fitzpatricks.length === 0
           ? true
           : c.fitzpatrick
-            ? fitzpatricks.includes(c.fitzpatrick)
-            : true; // include histo cases without FST
+          ? fitzpatricks.includes(c.fitzpatrick)
+          : true; // include histo cases without FST
       return subjectOk && fpOk;
     });
 
