@@ -50,8 +50,27 @@ function AppInner() {
   const [sessionId, setSessionId] = useState<string>(makeSessionId());
   const [score, setScore] = useState(0);
 
-  // ---- AUTOSAVE on every meaningful change ----
+  // ---- AUTOSAVE (signed-in users ONLY) ----
   useEffect(() => {
+    if (!uid || !quizStarted || selectedCases.length === 0) return;
+    const data: SavedProgress = {
+      sessionId,
+      caseIds: selectedCases.map((c) => c.id),
+      currentIndex,
+      score,
+      total: selectedCases.length,
+      updatedAt: new Date().toISOString(),
+    };
+    try {
+      localStorage.setItem(storageKey(uid), JSON.stringify(data));
+    } catch {}
+  }, [uid, quizStarted, selectedCases, currentIndex, score, sessionId]);
+
+  // Save on tab close/navigation (signed-in only)
+  useEffect(() => {
+  if (!uid) return;
+
+  const onBeforeUnload = () => {
     if (!quizStarted || selectedCases.length === 0) return;
     const data: SavedProgress = {
       sessionId,
@@ -64,59 +83,38 @@ function AppInner() {
     try {
       localStorage.setItem(storageKey(uid), JSON.stringify(data));
     } catch {}
-  }, [quizStarted, selectedCases, currentIndex, score, uid, sessionId]);
+  };
 
-  // Save on tab close/navigation just in case
+  window.addEventListener('beforeunload', onBeforeUnload);
+  return () => window.removeEventListener('beforeunload', onBeforeUnload);
+}, [uid, quizStarted, selectedCases, currentIndex, score, sessionId]);
+
+  // ---- RESTORE when landing on /quiz (signed-in only) ----
   useEffect(() => {
-    const onBeforeUnload = () => {
-      if (!quizStarted || selectedCases.length === 0) return;
-      const data: SavedProgress = {
-        sessionId,
-        caseIds: selectedCases.map((c) => c.id),
-        currentIndex,
-        score,
-        total: selectedCases.length,
-        updatedAt: new Date().toISOString(),
-      };
-      try {
-        localStorage.setItem(storageKey(uid), JSON.stringify(data));
-      } catch {}
-    };
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [quizStarted, selectedCases, currentIndex, score, uid, sessionId]);
+    if (!uid || location.pathname !== '/quiz') return;
 
-  // ---- RESTORE when landing on /quiz and a save exists ----
-  useEffect(() => {
-    const maybeRestore = () => {
-      const raw = localStorage.getItem(storageKey(uid));
-      if (!raw) return;
-      try {
-        const data: SavedProgress = JSON.parse(raw);
-        if (!data?.caseIds?.length) return;
+    const raw = localStorage.getItem(storageKey(uid));
+    if (!raw) return;
+    try {
+      const data: SavedProgress = JSON.parse(raw);
+      if (!data?.caseIds?.length) return;
 
-        // rebuild cases from IDs (falls back if any missing)
-        const rebuilt = data.caseIds
-          .map((id) => sampleCases.find((c) => c.id === id))
-          .filter(Boolean) as DermCase[];
+      const rebuilt = data.caseIds
+        .map((id) => sampleCases.find((c) => c.id === id))
+        .filter(Boolean) as DermCase[];
 
-        if (rebuilt.length === 0) return;
+      if (rebuilt.length === 0) return;
 
-        setSelectedCases(rebuilt);
-        setCurrentIndex(Math.min(data.currentIndex ?? 0, rebuilt.length - 1));
-        setScore(data.score ?? 0);
-        setSessionId(data.sessionId ?? makeSessionId());
-        setQuizStarted(true);
-      } catch {}
-    };
-
-    // Only auto-restore when user goes to /quiz
-    if (location.pathname === '/quiz') {
-      maybeRestore();
-    }
-  }, [location.pathname, uid]);
+      setSelectedCases(rebuilt);
+      setCurrentIndex(Math.min(data.currentIndex ?? 0, rebuilt.length - 1));
+      setScore(data.score ?? 0);
+      setSessionId(data.sessionId ?? makeSessionId());
+      setQuizStarted(true);
+    } catch {}
+  }, [uid, location.pathname]);
 
   const clearSavedProgress = () => {
+    if (!uid) return;
     try {
       localStorage.removeItem(storageKey(uid));
     } catch {}
@@ -126,7 +124,7 @@ function AppInner() {
   const handleGenerate = ({ count, subjects, fitzpatricks }: TestConfig) => {
     if (!uid) {
       alert('Please sign in with Google to save your quiz history.');
-      // (still allow anonymous runs; they save under anon key)
+      // guests are allowed to continue; they just won't have resume/history
     }
 
     const filtered = sampleCases.filter((c) => {
@@ -158,6 +156,7 @@ function AppInner() {
 
     if (isCorrect) setScore((s) => s + 1);
 
+    // Log attempts only for signed-in users
     if (uid) {
       logAttempt(
         {
@@ -178,7 +177,7 @@ function AppInner() {
     if (currentIndex < selectedCases.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
-      // Finished — record result, clear save, go home
+      // Finished — record result (signed-in only), clear save, go home
       if (uid) {
         const iso = new Date().toISOString().slice(0, 10);
         logQuizResult(
@@ -233,7 +232,8 @@ function AppInner() {
                     <p className="text-lg font-semibold mb-2">No active quiz.</p>
                     <p className="text-sm text-gray-600">
                       Start a new one on the <span className="font-medium">Create Test</span> page.
-                      {localStorage.getItem(storageKey(uid)) && (
+                      {/* Resume hint only makes sense when signed in */}
+                      {uid && localStorage.getItem(storageKey(uid)) && (
                         <> You also have a saved session — revisit this page to resume.</>
                       )}
                     </p>
