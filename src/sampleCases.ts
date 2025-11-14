@@ -7,20 +7,21 @@ export type SkinToneNotes = {
   variants?: Partial<Record<Fitz, string>>;
   pearls?: string[];
   pitfalls?: string[];
+  // NEW: optional per-Fitz image URLs (served from /public/images)
+  images?: Partial<Record<Fitz, string>>;
 };
 
 export type DermCase = {
   id: string;
   imageUrl: string;
   vignette: string;
-  leadIn?: string; // NEW: focused NBME-style question line
+  leadIn?: string; // focused NBME-style question line
   correctAnswer: string;
   options: string[];
   explanations: { [key: string]: string };
   subject: Subject;
   fitzpatrick?: Fitz;
   tags: string[];
-  // NEW
   skinToneNotes?: SkinToneNotes;
 };
 
@@ -39,7 +40,7 @@ export const sampleCases: DermCase[] = [
   // CLINICAL — LICHEN PLANUS
   withCompleteExplanations({
     id: 'clinical-lp-1',
-    imageUrl: '/images/lichenplanustypeIV.png',
+    imageUrl: '/images/lichenplanustypeIV.png', // existing PNG kept
     vignette:
       'A 42-year-old woman has 2 months of intensely pruritic, flat-topped papules on the volar wrists and ankles. Exam shows polygonal violaceous papules with fine white lines.',
     leadIn: 'Which diagnosis best explains these findings?',
@@ -69,6 +70,13 @@ export const sampleCases: DermCase[] = [
         V: 'Gray-brown to violaceous papules; scale subtle; PIH prominent.',
         VI: 'Dark brown/violaceous papules; chalky striae; PIH can be significant.',
       },
+      images: {
+        I: '/images/lichenplanustypeI.jpeg',
+        II: '/images/lichenplanustypeII.jpeg',
+        III: '/images/lichenplanustypeIII.jpeg',
+        V: '/images/lichenplanustypeV.jpeg',
+        VI: '/images/lichenplanustypeVI.jpeg',
+      },
       pearls: [
         'Check mucosa (buccal Wickham striae).',
         'Dermoscopy: white reticular lines over violaceous background.',
@@ -83,7 +91,7 @@ export const sampleCases: DermCase[] = [
   // CLINICAL — PSORIASIS
   withCompleteExplanations({
     id: 'clinical-psoriasis-1',
-    imageUrl: '/images/psoriasistypeI.png',
+    imageUrl: '/images/psoriasistypeI.png', // existing PNG kept
     vignette:
       'A 29-year-old man has recurrent, well-demarcated plaques on the elbows and knees. He notes flaking of the scalp and intermittent nail pitting.',
     leadIn: 'Which of the following is the most likely diagnosis?',
@@ -113,6 +121,13 @@ export const sampleCases: DermCase[] = [
         V: 'Hyperpigmented to dark-brown plaques with gray-white scale.',
         VI: 'Dark brown/black plaques; rely on thick scale and sharp borders.',
       },
+      images: {
+        II: '/images/psoriasistypeII.jpeg',
+        III: '/images/psoriasistypeIII.jpeg',
+        IV: '/images/psoriasistypeIV.jpeg',
+        V: '/images/psoriasistypeV.jpeg',
+        VI: '/images/psoriasistypeVI.jpeg',
+      },
       pearls: [
         'Assess severity by induration/area when erythema is subtle.',
         'Check scalp, umbilicus, and nails.',
@@ -127,7 +142,7 @@ export const sampleCases: DermCase[] = [
   // CLINICAL — TINEA CORPORIS
   withCompleteExplanations({
     id: 'clinical-tinea-1',
-    imageUrl: '/images/tineacorporistypeV.png',
+    imageUrl: '/images/tineacorporistypeV.png', // existing PNG kept
     vignette:
       'A 24-year-old athlete reports an expanding pruritic annular rash with central clearing and a raised scaly border on the thigh.',
     leadIn: 'Which diagnosis best explains the lesion described?',
@@ -153,6 +168,13 @@ export const sampleCases: DermCase[] = [
         V: 'Dark brown rim; gray scale; central area lighter or darker.',
         VI: 'Black-brown rim; feel for texture; look for trailing scale.',
       },
+      images: {
+        I: '/images/tineacorporistypeI.jpeg',
+        II: '/images/tineacorporistypeII.jpeg',
+        III: '/images/tineacorporistypeIII.jpeg',
+        IV: '/images/tineacorporistypeIV.jpeg',
+        VI: '/images/tineacorporistypeVI.jpeg',
+      },
       pearls: [
         'KOH from the active border improves accuracy when color cues are muted.',
         'Beware tinea incognito after topical steroids.',
@@ -167,7 +189,7 @@ export const sampleCases: DermCase[] = [
   // CLINICAL — ATOPIC DERMATITIS
   withCompleteExplanations({
     id: 'clinical-ad-1',
-    imageUrl: '/images/adtypeIII.png',
+    imageUrl: '/images/adtypeIII.png', // existing PNG kept
     vignette:
       'A 10-year-old child has dry, itchy patches in the antecubital fossae and popliteal folds. History includes asthma and allergic rhinitis.',
     leadIn: 'Which diagnosis is most likely?',
@@ -197,6 +219,13 @@ export const sampleCases: DermCase[] = [
         V: 'Brown-gray lichenified plaques; xerosis accentuates lines.',
         VI: 'Dark brown to slate-gray plaques; rely on texture/distribution over redness.',
       },
+      images: {
+        I: '/images/adtypeI.jpeg',
+        II: '/images/adtypeII.jpeg',
+        IV: '/images/adtypeIV.jpeg',
+        V: '/images/adtypeV.jpeg',
+        VI: '/images/adtypeVI.jpeg',
+      },
       pearls: [
         'Look for Dennie–Morgan folds and periorbital darkening.',
         'Treat inflammation early to limit dyspigmentation.',
@@ -211,7 +240,7 @@ export const sampleCases: DermCase[] = [
   // CLINICAL — BASAL CELL CARCINOMA
   withCompleteExplanations({
     id: 'clinical-bcc-1',
-    imageUrl: '/images/bcctypeI.png',
+    imageUrl: '/images/bcctypeI.png', // existing PNG kept
     vignette:
       'A 65-year-old man has a slowly enlarging papule on the upper lip. Exam shows a pearly, translucent papule with surface telangiectasias.',
     leadIn: 'Which is the most likely diagnosis?',
@@ -220,13 +249,17 @@ export const sampleCases: DermCase[] = [
       'Basal cell carcinoma',
       'Squamous cell carcinoma in situ (Bowen disease)',
       'Seborrheic keratosis',
-      'Acquired melanocytic nevus'
+      'Acquired melanocytic nevus',
     ],
     explanations: {
-      'Basal cell carcinoma': 'Correct. Pearly/translucent papule with telangiectasias and rolled border on a sun-exposed site.',
-      'Squamous cell carcinoma in situ (Bowen disease)': 'Incorrect. Scaly erythematous plaque with crust; not pearly/rolled.',
-      'Seborrheic keratosis': 'Incorrect. Waxy “stuck-on” papule/plaque with comedo-like openings.',
-      'Acquired melanocytic nevus': 'Incorrect. Symmetric, uniform color; usually stable.',
+      'Basal cell carcinoma':
+        'Correct. Pearly/translucent papule with telangiectasias and rolled border on a sun-exposed site.',
+      'Squamous cell carcinoma in situ (Bowen disease)':
+        'Incorrect. Scaly erythematous plaque with crust; not pearly/rolled.',
+      'Seborrheic keratosis':
+        'Incorrect. Waxy “stuck-on” papule/plaque with comedo-like openings.',
+      'Acquired melanocytic nevus':
+        'Incorrect. Symmetric, uniform color; usually stable.',
     },
     fitzpatrick: 'I',
     subject: 'Clinical',
@@ -242,6 +275,11 @@ export const sampleCases: DermCase[] = [
         V: 'Dark brown/black shiny nodule; can mimic melanoma.',
         VI: 'Black shiny plaque; rely on border/ulceration over redness.',
       },
+      images: {
+        II: '/images/bcctypeII.jpeg',
+        III: '/images/bcctypeIII.jpeg',
+        V: '/images/bcctypeV.jpeg',
+      },
       pearls: [
         'Dermoscopy: arborizing vessels and shiny white structures even when erythema is muted.',
         'Pigmented BCC is common in deeper tones—maintain biopsy threshold.',
@@ -256,18 +294,26 @@ export const sampleCases: DermCase[] = [
   // CLINICAL — MELANOMA (ACRAL)
   withCompleteExplanations({
     id: 'clinical-melanoma-1',
-    imageUrl: '/images/melanomatypeVI.png',
+    imageUrl: '/images/melanomatypeVI.png', // existing PNG kept
     vignette:
       'A 50-year-old woman notices a dark, irregularly shaped enlarging patch on the sole. Dermoscopy shows irregular diffuse pigmentation.',
     leadIn: 'Which diagnosis is most likely?',
     correctAnswer: 'Melanoma (acral lentiginous)',
-    options: ['Melanoma (acral lentiginous)', 'Seborrheic keratosis', 'Acral melanocytic nevus', 'Tinea nigra'],
+    options: [
+      'Melanoma (acral lentiginous)',
+      'Seborrheic keratosis',
+      'Acral melanocytic nevus',
+      'Tinea nigra',
+    ],
     explanations: {
       'Melanoma (acral lentiginous)':
         'Correct. Irregular, enlarging pigmented lesion on a sole/palm; high suspicion. Parallel ridge pattern on dermoscopy is classic.',
-      'Seborrheic keratosis': 'Incorrect. Stuck-on, waxy papule/plaque; not an enlarging irregular patch on the sole.',
-      'Acral melanocytic nevus': 'Incorrect. Stable, symmetric; benign network pattern.',
-      'Tinea nigra': 'Incorrect. Superficial pigmented infection on palms/soles; scraping/KOH positive; usually uniform brown macule.',
+      'Seborrheic keratosis':
+        'Incorrect. Stuck-on, waxy papule/plaque; not an enlarging irregular patch on the sole.',
+      'Acral melanocytic nevus':
+        'Incorrect. Stable, symmetric; benign network pattern.',
+      'Tinea nigra':
+        'Incorrect. Superficial pigmented infection on palms/soles; scraping/KOH positive; usually uniform brown macule.',
     },
     fitzpatrick: 'VI',
     subject: 'Clinical',
@@ -282,6 +328,13 @@ export const sampleCases: DermCase[] = [
         IV: 'Deep brown to black patch with irregular borders.',
         V: 'Jet-black lesion; watch for Hutchinson sign subungually.',
         VI: 'Black macule/patch; late presentation more likely.',
+      },
+      images: {
+        I: '/images/melanomatypeI.jpeg',
+        II: '/images/melanomatypeII.jpeg',
+        III: '/images/melanomatypeIII.jpeg',
+        IV: '/images/melanomatypeIV.jpeg',
+        V: '/images/melanomatypeV.jpeg',
       },
       pearls: [
         'Examine palms, soles, and nails routinely across all tones.',
@@ -302,16 +355,23 @@ export const sampleCases: DermCase[] = [
       'Histology shows a dense, band-like lymphocytic infiltrate at the dermoepidermal junction with sawtoothing of the rete ridges.',
     leadIn: 'Which diagnosis is most consistent with these histologic findings?',
     correctAnswer: 'Lichen planus',
-    options: ['Lichen planus', 'Psoriasis vulgaris', 'Cutaneous lupus erythematosus', 'Erythema multiforme'],
+    options: [
+      'Lichen planus',
+      'Psoriasis vulgaris',
+      'Cutaneous lupus erythematosus',
+      'Erythema multiforme',
+    ],
     explanations: {
       'Lichen planus': 'Correct. Lichenoid interface dermatitis with sawtooth rete.',
-      'Psoriasis vulgaris': 'Incorrect. Parakeratosis, elongated rete ridges, Munro microabscesses.',
-      'Cutaneous lupus erythematosus': 'Incorrect. Basal vacuolization, thickened basement membrane.',
-      'Erythema multiforme': 'Incorrect. Interface dermatitis with necrotic keratinocytes.',
+      'Psoriasis vulgaris':
+        'Incorrect. Parakeratosis, elongated rete ridges, Munro microabscesses.',
+      'Cutaneous lupus erythematosus':
+        'Incorrect. Basal vacuolization, thickened basement membrane.',
+      'Erythema multiforme':
+        'Incorrect. Interface dermatitis with necrotic keratinocytes.',
     },
     subject: 'Histopathology',
     tags: ['lichenoid', 'sawtooth'],
-    skinToneNotes: { /* unchanged from yours */ },
   }),
 
   // HISTOPATHOLOGY — PSORIASIS
@@ -322,17 +382,24 @@ export const sampleCases: DermCase[] = [
       'Sections show parakeratosis, neutrophils within the stratum corneum (Munro microabscesses), and elongated rete ridges.',
     leadIn: 'Which diagnosis is most consistent with these histologic findings?',
     correctAnswer: 'Psoriasis vulgaris',
-    options: ['Psoriasis vulgaris', 'Seborrheic dermatitis', 'Lichen planus', 'Spongiotic dermatitis (eczema)'],
+    options: [
+      'Psoriasis vulgaris',
+      'Seborrheic dermatitis',
+      'Lichen planus',
+      'Spongiotic dermatitis (eczema)',
+    ],
     explanations: {
       'Psoriasis vulgaris':
         'Correct. Parakeratosis with neutrophils (Munro microabscesses) and psoriasiform hyperplasia.',
-      'Seborrheic dermatitis': 'Incorrect. More spongiosis; may show Malassezia; lacks Munro abscesses.',
-      'Lichen planus': 'Incorrect. Band-like lichenoid infiltrate.',
-      'Spongiotic dermatitis (eczema)': 'Incorrect. Spongiosis without parakeratosis with neutrophils.',
+      'Seborrheic dermatitis':
+        'Incorrect. More spongiosis; may show Malassezia; lacks Munro abscesses.',
+      'Lichen planus':
+        'Incorrect. Band-like lichenoid infiltrate.',
+      'Spongiotic dermatitis (eczema)':
+        'Incorrect. Spongiosis without parakeratosis with neutrophils.',
     },
     subject: 'Histopathology',
     tags: ['parakeratosis', 'munro'],
-    skinToneNotes: { /* unchanged from yours */ },
   }),
 
   // HISTOPATHOLOGY — BCC
@@ -345,14 +412,17 @@ export const sampleCases: DermCase[] = [
     correctAnswer: 'Basal cell carcinoma',
     options: ['Basal cell carcinoma', 'Squamous cell carcinoma', 'Sebaceous carcinoma', 'Trichoepithelioma'],
     explanations: {
-      'Basal cell carcinoma': 'Correct. Basaloid nests with palisading and retraction artifact.',
-      'Squamous cell carcinoma': 'Incorrect. Keratin pearls/intercellular bridges.',
-      'Sebaceous carcinoma': 'Incorrect. Vacuolated cytoplasm; atypia/mitoses.',
-      'Trichoepithelioma': 'Incorrect. More follicular differentiation; lacks classic retraction/palisading.',
+      'Basal cell carcinoma':
+        'Correct. Basaloid nests with palisading and retraction artifact.',
+      'Squamous cell carcinoma':
+        'Incorrect. Keratin pearls/intercellular bridges.',
+      'Sebaceous carcinoma':
+        'Incorrect. Vacuolated cytoplasm; atypia/mitoses.',
+      'Trichoepithelioma':
+        'Incorrect. More follicular differentiation; lacks classic retraction/palisading.',
     },
     subject: 'Histopathology',
     tags: ['palisading', 'retraction'],
-    skinToneNotes: { /* unchanged from yours */ },
   }),
 
   // HISTOPATHOLOGY — MELANOMA
@@ -365,13 +435,15 @@ export const sampleCases: DermCase[] = [
     correctAnswer: 'Melanoma',
     options: ['Melanoma', 'Acquired melanocytic nevus', 'Basal cell carcinoma', 'Dermatofibroma'],
     explanations: {
-      'Melanoma': 'Correct. Atypical melanocytes with pagetoid spread and dermal invasion.',
-      'Acquired melanocytic nevus': 'Incorrect. Uniform benign melanocytes; no invasion.',
-      'Basal cell carcinoma': 'Incorrect. Basaloid nests with palisading.',
-      'Dermatofibroma': 'Incorrect. Spindle cells and epidermal hyperplasia; not melanocytic.',
+      Melanoma: 'Correct. Atypical melanocytes with pagetoid spread and dermal invasion.',
+      'Acquired melanocytic nevus':
+        'Incorrect. Uniform benign melanocytes; no invasion.',
+      'Basal cell carcinoma':
+        'Incorrect. Basaloid nests with palisading.',
+      Dermatofibroma:
+        'Incorrect. Spindle cells and epidermal hyperplasia; not melanocytic.',
     },
     subject: 'Histopathology',
     tags: ['atypical melanocytes', 'invasion'],
-    skinToneNotes: { /* unchanged from yours */ },
   }),
 ];
