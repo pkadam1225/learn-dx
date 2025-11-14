@@ -99,7 +99,7 @@ export default function SkinToneNotes({
                               alt={`${title} example on Fitzpatrick ${ftz}`}
                               className="h-12 w-12 rounded-md object-cover border border-slate-200 group-hover:ring-2 group-hover:ring-blue-400"
                             />
-                            <span className="text-xs text-slate-600 underline group-hover:text-blue-600">
+                            <span className="text-xs text-white transition-opacity group-hover:opacity-80">
                               {expandedTone === ftz ? "Hide larger view" : "View larger"}
                             </span>
                           </button>
